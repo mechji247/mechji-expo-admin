@@ -2,12 +2,14 @@
   "expo": {
     "name": "mechji-admins",
     "slug": "mechji-admins",
+    "scheme": "mechjiadmin",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mechji247.mechjiadmins"
     },
     "android": {
       "adaptiveIcon": {
@@ -15,10 +17,16 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "package": "com.mechji247.mechjiadmins"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store"
+    ]
   }
 }
