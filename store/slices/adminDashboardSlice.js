@@ -1,16 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import axios from 'axios';
-import { backendUrl } from '../../lib/utils/env';
-
-const API_BASE_URL = backendUrl
-const DASHBOARD_BASE = `${API_BASE_URL}/api/admin/dashboard`;
-
-const axiosConfig = {
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-};
+import adminApi from '../../lib/services/adminApi';
 
 const initialPaginationBlock = {
   page: 1,
@@ -135,10 +124,7 @@ export const fetchDashboardBootstrap = createAsyncThunk(
   'adminDashboard/fetchDashboardBootstrap',
   async (params = {}, thunkAPI) => {
     try {
-      const response = await axios.get(`${DASHBOARD_BASE}/bootstrap`, {
-        ...axiosConfig,
-        params,
-      });
+      const response = await adminApi.get(`/dashboard/bootstrap`,{ params })
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -152,7 +138,7 @@ export const fetchDashboardOverview = createAsyncThunk(
   'adminDashboard/fetchDashboardOverview',
   async (_, thunkAPI) => {
     try {
-      const response = await axios.get(`${DASHBOARD_BASE}/overview`, axiosConfig);
+      const response = await adminApi.get(`/dashboard/overview`);
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -166,10 +152,7 @@ export const fetchDashboardActivity = createAsyncThunk(
   'adminDashboard/fetchDashboardActivity',
   async (params = {}, thunkAPI) => {
     try {
-      const response = await axios.get(`${DASHBOARD_BASE}/activity`, {
-        ...axiosConfig,
-        params,
-      });
+      const response = await adminApi.get(`/dashboard/activity`, { params });
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -184,15 +167,12 @@ export const fetchDashboardUsers = createAsyncThunk(
   async (params = {}, thunkAPI) => {
     try {
       const state = thunkAPI.getState().adminDashboard;
-      const response = await axios.get(`${DASHBOARD_BASE}/users`, {
-        ...axiosConfig,
-        params: {
+      const response = await adminApi.get(`/dashboard/users`, { params: {
           ...getListParams(state, 'users', {
             status: state.filters.userStatus,
           }),
           ...params,
-        },
-      });
+        }, } );
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -207,9 +187,8 @@ export const fetchDashboardVendors = createAsyncThunk(
   async (params = {}, thunkAPI) => {
     try {
       const state = thunkAPI.getState().adminDashboard;
-      const response = await axios.get(`${DASHBOARD_BASE}/vendors`, {
-        ...axiosConfig,
-        params: {
+      const response = await adminApi.get(`/dashboard/vendors`, {
+             params: {
           ...getListParams(state, 'vendors', {
             status: state.filters.vendorStatus,
           }),
@@ -230,9 +209,8 @@ export const fetchDashboardProducts = createAsyncThunk(
   async (params = {}, thunkAPI) => {
     try {
       const state = thunkAPI.getState().adminDashboard;
-      const response = await axios.get(`${DASHBOARD_BASE}/products`, {
-        ...axiosConfig,
-        params: {
+      const response = await adminApi.get(`/dashboard/products`,{
+              params: {
           ...getListParams(state, 'products', {
             status: state.filters.productStatus,
           }),
@@ -253,9 +231,8 @@ export const fetchDashboardServices = createAsyncThunk(
   async (params = {}, thunkAPI) => {
     try {
       const state = thunkAPI.getState().adminDashboard;
-      const response = await axios.get(`${DASHBOARD_BASE}/services`, {
-        ...axiosConfig,
-        params: {
+      const response = await adminApi.get(`/dashboard/services`,{
+              params: {
           ...getListParams(state, 'services', {
             status: state.filters.serviceStatus,
           }),
@@ -276,9 +253,8 @@ export const fetchDashboardOrders = createAsyncThunk(
   async (params = {}, thunkAPI) => {
     try {
       const state = thunkAPI.getState().adminDashboard;
-      const response = await axios.get(`${DASHBOARD_BASE}/orders`, {
-        ...axiosConfig,
-        params: {
+      const response = await adminApi.get(`/dashboard/orders`,{
+              params: {
           ...getListParams(state, 'orders'),
           ...params,
         },
@@ -297,13 +273,12 @@ export const fetchDashboardBookings = createAsyncThunk(
   async (params = {}, thunkAPI) => {
     try {
       const state = thunkAPI.getState().adminDashboard;
-      const response = await axios.get(`${DASHBOARD_BASE}/bookings`, {
-        ...axiosConfig,
-        params: {
-          ...getListParams(state, 'bookings'),
-          ...params,
-        },
-      });
+      const response = await adminApi.get(`/dashboard/bookings`,{
+                       params: {
+                        ...getListParams(state, 'bookings'),
+                        ...params,
+                      },
+                    });
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -318,9 +293,8 @@ export const fetchDashboardReports = createAsyncThunk(
   async (params = {}, thunkAPI) => {
     try {
       const state = thunkAPI.getState().adminDashboard;
-      const response = await axios.get(`${DASHBOARD_BASE}/reports`, {
-        ...axiosConfig,
-        params: {
+      const response = await adminApi.get(`/dashboard/reports`, {
+         params: {
           ...getListParams(state, 'reports', {
             status: state.filters.reportStatus,
           }),
@@ -341,9 +315,8 @@ export const fetchDashboardPayments = createAsyncThunk(
   async (params = {}, thunkAPI) => {
     try {
       const state = thunkAPI.getState().adminDashboard;
-      const response = await axios.get(`${DASHBOARD_BASE}/commission-payments`, {
-        ...axiosConfig,
-        params: {
+      const response = await adminApi.get(`/dashboard/commission-payments`, {
+            params: {
           ...getListParams(state, 'payments', {
             status: state.filters.paymentStatus,
           }),
@@ -364,13 +337,15 @@ export const fetchDashboardLegalDocuments = createAsyncThunk(
   async (params = {}, thunkAPI) => {
     try {
       const state = thunkAPI.getState().adminDashboard;
-      const response = await axios.get(`${DASHBOARD_BASE}/legal-documents`, {
-        ...axiosConfig,
+      const response = await adminApi.get(`/dashboard/legal-documents`, {
         params: {
-          ...getListParams(state, 'legalDocuments'),
+          ...getListParams(state, 'legalDocuments', {
+            status: state.filters.paymentStatus,
+          }),
           ...params,
         },
-      });
+      })
+     
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(

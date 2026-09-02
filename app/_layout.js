@@ -5,14 +5,14 @@ import { ActivityIndicator, View } from "react-native";
 import { Provider , useDispatch , useSelector } from "react-redux";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../lib/constants/theme';
-import { selectAdminStatusMessage , selectAdminRefreshLoading, refreshAdminSession, resetAdminAuthState } from '../store/slices/adminSlice';
+import { selectAdminStatus , selectAdminRefreshLoading, refreshAdminSession, resetAdminAuthState } from '../store/slices/adminSlice';
 import { store } from '../store/store';
 import {  clearTokens, hasStoredSession, saveTokens} from '../lib/tokens/secureTokens';
 
 
 function RootNavigator () {
         const dispatch = useDispatch();
-        const status = useSelector(selectAdminStatusMessage);
+        const status = useSelector(selectAdminStatus);
         const isBootstrapping = useSelector(selectAdminRefreshLoading);
         const segments = useSegments();
         const router = useRouter();

@@ -1,7 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import adminApi from '../../lib/services/adminApi';
-import { saveTokens } from '../../lib/tokens/secureTokens';
-import log from '../../lib/utils/logger';
 
 const initialState = {
   adminInfo: null,
@@ -42,7 +40,6 @@ export const adminLogin = createAsyncThunk(
   async (payload, { rejectWithValue }) => {
     try {
       const { data } = await adminApi.post(`/auth/login`, payload);
-      await saveTokens({ accessToken : data?.accessToken , refreshToken : data?.refreshToken })
       return data;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Admin login failed'));
@@ -67,7 +64,6 @@ export const refreshAdminSession = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const { data } = await adminApi.post(`/auth/refresh`, { clientType : "expo" });
-      await saveTokens({ accessToken : data?.accessToken , refreshToken : data?.refreshToken })
       return data;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Unable to refresh admin session'));
@@ -185,6 +181,12 @@ const adminSlice = createSlice({
         state.refreshLoading = false;
         state.initialized = true;
         state.statusMessage = action.payload?.message || null;
+        state.adminInfo = action.payload?.admin || null;
+        state.isAuthenticated = Boolean(
+          action.payload?.admin &&
+          !action.payload?.mfaRequired &&
+          !action.payload?.mfaSetupRequired
+        );
       })
       .addCase(refreshAdminSession.rejected, (state, action) => {
         state.refreshLoading = false;

@@ -19,8 +19,6 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Dashboard', tabBarIcon: ({ color }) => <TabIcon symbol="⌂" color={color} /> }} />
-      <Tabs.Screen name="users" options={{ title: 'Users', tabBarIcon: ({ color }) => <TabIcon symbol="👤" color={color} /> }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ color }) => <TabIcon symbol="⚙" color={color} /> }} />
     </Tabs>
   );
 }
