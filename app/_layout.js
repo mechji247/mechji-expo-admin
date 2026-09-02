@@ -7,6 +7,7 @@ import { bootstrapSession , selectAdminStatus , selectIsBootstrapping } from '..
 import { store } from '../store/store';
 
 
+
 function RootNavigator () {
         const dispatch = useDispatch();
         const status = useSelector(selectAdminStatus);
