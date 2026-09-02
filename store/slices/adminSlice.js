@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import axios from 'axios';
-import { backendUrl } from '../../lib/utils/env';
+import adminApi from '../../lib/services/adminApi';
+import { saveTokens } from '../../lib/tokens/secureTokens';
+import log from '../../lib/utils/logger';
 
 const initialState = {
   adminInfo: null,
@@ -40,10 +41,9 @@ export const adminLogin = createAsyncThunk(
   'mechjiAdmin/login',
   async (payload, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${backendUrl}/api/admin/auth/login`, payload, {
-        withCredentials: true,
-      });
-      return response.data;
+      const { data } = await adminApi.post(`/auth/login`, payload);
+      await saveTokens({ accessToken : data?.accessToken , refreshToken : data?.refreshToken })
+      return data;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Admin login failed'));
     }
@@ -54,9 +54,7 @@ export const verifyAdminMfa = createAsyncThunk(
   'mechjiAdmin/verifyMfa',
   async (payload, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/admin/auth/mfa/verify', payload, {
-        withCredentials: true,
-      });
+      const response = await adminApi.post(`/auth/mfa/verify`, payload);
       return response.data;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'MFA verification failed'));
@@ -68,12 +66,9 @@ export const refreshAdminSession = createAsyncThunk(
   'mechjiAdmin/refreshSession',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.post(
-        '/api/admin-auth/refresh',
-        {},
-        { withCredentials: true }
-      );
-      return response.data;
+      const { data } = await adminApi.post(`/auth/refresh`, { clientType : "expo" });
+      await saveTokens({ accessToken : data?.accessToken , refreshToken : data?.refreshToken })
+      return data;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Unable to refresh admin session'));
     }
@@ -84,9 +79,7 @@ export const fetchAdminProfile = createAsyncThunk(
   'mechjiAdmin/fetchProfile',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get('/api/admin/auth/me', {
-        withCredentials: true,
-      });
+      const response = await adminApi.get(`/auth/me`);
       return response.data;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Failed to fetch admin profile'));
@@ -98,11 +91,7 @@ export const adminLogout = createAsyncThunk(
   'mechjiAdmin/logout',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.post(
-        `${backendUrl}/api/admin/auth/logout`,
-        {},
-        { withCredentials: true }
-      );
+      const response = await adminApi.post(`/auth/logout`);
       return response.data;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Admin logout failed'));
@@ -265,7 +254,13 @@ export const selectAdminStatusMessage = (state) => state.mechjiAdmin.statusMessa
 export const selectAdminMfaRequired = (state) => state.mechjiAdmin.mfaRequired;
 export const selectAdminMfaSetupRequired = (state) => state.mechjiAdmin.mfaSetupRequired;
 export const selectAdminChallengeToken = (state) => state.mechjiAdmin.challengeToken;
-export const selectAdminMustChangePassword = (state) =>
-  Boolean(state.mechjiAdmin.adminInfo?.mustChangePassword);
+export const selectAdminMustChangePassword = (state) => Boolean(state.mechjiAdmin.adminInfo?.mustChangePassword);
+export const selectAdminStatus = (state) => {
+  const { initialized, isAuthenticated, mfaRequired, mfaSetupRequired } = state?.mechjiAdmin;
+  if (!initialized) return 'bootstrapping';
+  if (mfaRequired || mfaSetupRequired) return 'mfaRequired';
+  if (isAuthenticated) return 'authenticated';
+  return 'unauthenticated';
+};
 
 export default adminSlice.reducer;
