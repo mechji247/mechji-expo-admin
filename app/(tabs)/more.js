@@ -6,23 +6,21 @@ import { useDispatch, useSelector } from 'react-redux';
 import { colors, spacing } from '../../lib/constants/theme';
 import { adminLogout, selectAdminInfo, selectAdminLoading } from '../../store/slices/adminSlice';
 
-// Rows with a real destination navigate there; everything else doesn't
-// have a screen/backend yet, so it shows an honest "coming soon" alert
-// instead of a route that doesn't exist.
 const COMMERCE_ROWS = [
-  { key: 'bookings', label: 'Service bookings', icon: 'calendar-outline' },
-  { key: 'products', label: 'Products', icon: 'reader-outline' },
-  { key: 'subscriptions', label: 'Subscriptions', icon: 'card-outline' },
-  { key: 'promotions', label: 'Promotions', icon: 'pricetag-outline' },
+  { key: 'orders', label: 'Orders', icon: 'receipt-outline', route: '/orders' },
+  { key: 'bookings', label: 'Service bookings', icon: 'calendar-outline', route: '/bookings' },
+  { key: 'products', label: 'Products', icon: 'reader-outline', route: '/products' },
+  { key: 'subscriptions', label: 'Subscriptions', icon: 'card-outline', route: '/subscriptions' },
+  { key: 'promotions', label: 'Promotions', icon: 'pricetag-outline', route: '/promotions' },
 ];
-
+ 
 const PEOPLE_ROWS = [
-  { key: 'vendorStaff', label: 'Vendor staff', icon: 'people-outline' },
+  { key: 'vendorStaff', label: 'Vendor staff', icon: 'people-outline', route: '/staff' },
   { key: 'adminTeam', label: 'Admin team', icon: 'person-add-outline', route: '/admins' },
-  { key: 'reviews', label: 'Reviews', icon: 'star-outline' },
+  { key: 'reviews', label: 'Reviews', icon: 'star-outline', route: '/reviews' },
   { key: 'chats', label: 'Chats', icon: 'chatbubble-outline', route: '/chats' },
-  { key: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
-  { key: 'trustSafety', label: 'Trust & safety reports', icon: 'time-outline' },
+  { key: 'notifications', label: 'Notifications', icon: 'notifications-outline', route: '/notifications' },
+  { key: 'trustSafety', label: 'Trust & safety reports', icon: 'time-outline', route: '/trust-safety' },
 ];
 
 function getInitials(name) {
