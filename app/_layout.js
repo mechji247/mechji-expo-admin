@@ -1,6 +1,6 @@
 import { Stack , useRouter , useSegments } from 'expo-router';
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect , useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Provider , useDispatch , useSelector } from "react-redux";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import {  clearTokens, hasStoredSession, saveTokens} from '../lib/tokens/secureT
 function RootNavigator () {
         const dispatch = useDispatch();
         const status = useSelector(selectAdminStatus);
+        const [loading , setLoading] = useState(true)
         const isBootstrapping = useSelector(selectAdminRefreshLoading);
         const segments = useSegments();
         const router = useRouter();
@@ -24,6 +25,7 @@ function RootNavigator () {
                 if(!session){
                   dispatch(resetAdminAuthState())
                   router.replace("login")
+                  setLoading(false);
                   return
                 };
 
@@ -31,6 +33,13 @@ function RootNavigator () {
                 if(response.type === "mechjiAdmin/refreshSession/fulfilled"){
                   await saveTokens({ accessToken : response?.payload?.accessToken , refreshToken : response?.payload?.refreshToken });
                   router.replace("/")
+                  setLoading(false);
+                  return;
+                }else{
+                  await clearTokens();
+                  dispatch(resetAdminAuthState());
+                  setLoading(false);
+                  router.replace('login');
                   return;
                 }
 
@@ -38,46 +47,34 @@ function RootNavigator () {
                 console.error('Error on creating new session:', error?.response?.data?.message || error?.message || error);
                 dispatch(resetAdminAuthState());
                 clearTokens();
+                setLoading(false);
                 router.replace('login');
+              }finally{
+                setLoading(false);
               }
         }
-
-        useEffect(() => {
-          if(isBootstrapping) return;
- 
-          const inAuthGroup = segments[0] === "(auth)";
-          const inTabGroup = segments[0] === "(tabs)";
-          const onMfaScreen = inAuthGroup && segments[1] === "mfa";
- 
-          if(status === "authenticated" && !inTabGroup) {
-            router.replace('/(tabs)');
-          } else if(status === "mfaRequired" && !onMfaScreen) {
-            router.replace("/mfa");
-          }else if(status === "unauthenticated" && (inTabGroup || onMfaScreen)) {
-            router.replace("/login");
-          }
- 
-        },[status , isBootstrapping , segments , router]);
 
         useEffect(() => {
             startAdminSession();
         },[]);
 
   
-        if (isBootstrapping) {
+        if (loading) {
           return (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
           );
+        }else{
+
+          return (
+            <Stack screenOptions={{ headerShown : false }}>
+                <Stack.Screen name="(auth)"/>
+                <Stack.Screen name="(tabs)"/>
+            </Stack>
+          )
         }
 
-        return (
-          <Stack screenOptions={{ headerShown : false }}>
-              <Stack.Screen name="(auth)"/>
-              <Stack.Screen name="(tabs)"/>
-          </Stack>
-        )
 }
 
 
@@ -86,7 +83,7 @@ export default function RootLayout() {
           <SafeAreaProvider>
               <Provider store={store}>
                 <RootNavigator/>
-                <StatusBar style="auto"/>
+                <StatusBar style="dark"/>
               </Provider>
           </SafeAreaProvider>
         );
