@@ -5,10 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { colors, spacing } from '../../lib/constants/theme';
 import { adminLogout, selectAdminInfo, selectAdminLoading } from '../../store/slices/adminSlice';
+import log from '../../lib/utils/logger';
 
 const COMMERCE_ROWS = [
   { key: 'orders', label: 'Orders', icon: 'receipt-outline', route: '/orders' },
-  { key: 'bookings', label: 'Service bookings', icon: 'calendar-outline', route: '/bookings' },
+  { key: 'bookings', label: 'Service bookings', icon: 'calendar-outline', route: '/orders?tab=service' },
   { key: 'products', label: 'Products', icon: 'reader-outline', route: '/products' },
   { key: 'subscriptions', label: 'Subscriptions', icon: 'card-outline', route: '/subscriptions' },
   { key: 'promotions', label: 'Promotions', icon: 'pricetag-outline', route: '/promotions' },
@@ -63,6 +64,16 @@ export default function MoreScreen() {
     }
   };
 
+  const handleLogout = async () => {
+        try {
+         await dispatch(adminLogout());
+        } catch (error) {
+          console.error("Logout error", error)
+        }finally{
+          router.replace("login");
+        }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -98,7 +109,7 @@ export default function MoreScreen() {
 
       <Pressable
         style={[styles.logoutButton, loading && styles.logoutButtonDisabled]}
-        onPress={() => dispatch(adminLogout())}
+        onPress={() => handleLogout()}
         disabled={loading}
       >
         <Ionicons name="log-out-outline" size={18} color={colors.danger} />

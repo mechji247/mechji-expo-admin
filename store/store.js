@@ -13,6 +13,8 @@ import promotionsReducer from './slices/promotionsSlice';
 import notificationsReducer from './slices/notificationsSlice';
 import chatReducer from './slices/chatSlice';
 import trustSafetyReducer from './slices/trustSafetySlice';
+import ordersReducer from './slices/ordersSlice';
+import productsReducer from './slices/productsSlice';
 
 
 export const store = configureStore({
@@ -30,5 +32,7 @@ export const store = configureStore({
     notifications: notificationsReducer,
     chat: chatReducer,
     trustSafety: trustSafetyReducer,
+    orders: ordersReducer,
+    products: productsReducer,
   },
 });

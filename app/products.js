@@ -15,12 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { colors, getAvatarColor, spacing } from '../lib/constants/theme';
 import {
-  fetchDashboardProducts,
-  selectDashboardErrors,
-  selectDashboardLists,
-  selectDashboardLoading,
-  selectDashboardOverview,
-} from '../store/slices/adminDashboardSlice';
+  fetchProducts,
+  selectProductsError,
+  selectProductsList,
+  selectProductsLoading,
+} from '../store/slices/productsSlice';
+import { selectDashboardOverview } from '../store/slices/adminDashboardSlice';
 
 const STATUS_FILTERS = [
   { label: 'All', value: '' },
@@ -101,22 +101,18 @@ export default function ProductsScreen() {
   const dispatch = useDispatch();
   const router = useRouter();
 
-  const lists = useSelector(selectDashboardLists);
-  const loading = useSelector(selectDashboardLoading);
-  const errors = useSelector(selectDashboardErrors);
+  const list = useSelector(selectProductsList);
+  const loading = useSelector(selectProductsLoading);
+  const error = useSelector(selectProductsError);
   const overview = useSelector(selectDashboardOverview);
 
   const [searchText, setSearchText] = useState('');
   const [status, setStatus] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Explicit params on every call rather than relying on the slice's
-  // shared filters.search/productStatus — that field is shared across
-  // every dashboard list, so a value set here could otherwise leak into
-  // another tab's fetch.
   const runFetch = useCallback(
     (nextSearch, nextStatus) => {
-      dispatch(fetchDashboardProducts({ page: 1, limit: 50, search: nextSearch, status: nextStatus }));
+      dispatch(fetchProducts({ page: 1, limit: 50, search: nextSearch, status: nextStatus }));
     },
     [dispatch]
   );
@@ -133,7 +129,7 @@ export default function ProductsScreen() {
   };
   const handleRefresh = async () => {
     setRefreshing(true);
-    await dispatch(fetchDashboardProducts({ page: 1, limit: 50, search: searchText.trim(), status }));
+    await dispatch(fetchProducts({ page: 1, limit: 50, search: searchText.trim(), status }));
     setRefreshing(false);
   };
 
@@ -176,14 +172,14 @@ export default function ProductsScreen() {
           ))}
         </View>
 
-        {!!errors.products && (
+        {!!error && (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{errors.products}</Text>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
         <FlatList
-          data={lists.products}
+          data={list}
           keyExtractor={(item, index) => getProductId(item) || String(index)}
           contentContainerStyle={styles.listContent}
           refreshControl={
@@ -191,7 +187,7 @@ export default function ProductsScreen() {
           }
           renderItem={({ item }) => <ProductRow product={item} />}
           ListEmptyComponent={
-            loading.products ? (
+            loading ? (
               <View style={styles.emptyState}>
                 <ActivityIndicator color={colors.primary} />
               </View>

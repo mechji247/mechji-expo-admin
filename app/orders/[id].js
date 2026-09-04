@@ -1,20 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { colors, spacing } from '../../lib/constants/theme';
-import { selectDashboardLists } from '../../store/slices/adminDashboardSlice';
+import {
+  fetchBookingById,
+  fetchOrderById,
+  selectCurrentOrder,
+  selectCurrentOrderError,
+  selectCurrentOrderLoading,
+  selectProductOrders,
+  selectServiceBookings,
+  updateBookingStatus,
+  updateOrderStatus,
+} from '../../store/slices/ordersSlice';
 
-// There's no GET /orders/order/:id (or bookings equivalent) endpoint yet,
-// so this screen doesn't fetch anything of its own — it just looks the
-// order up in whatever the Orders list screen already loaded into
-// adminDashboard.lists.orders/bookings. That means: (a) opening this
-// screen without having visited the list first shows "Order not found",
-// and (b) fields the list endpoint doesn't return (a full items
-// breakdown, pricing lines) will show as "—" until a real detail
-// endpoint exists. Worth building GET /orders/order/:id mirroring the
-// vendor/user detail pattern once the backend has one.
+// Backed by GET /admin/orders/order/:id and /admin/orders/booking/:id.
+// While that request is in flight (or if it 404s — the backend doesn't
+// track every historical field on the list endpoint), this screen falls
+// back to whatever the Orders list already loaded into ordersSlice, so
+// opening a row you just tapped still shows something immediately.
 const STAGES = ['placed', 'confirmed', 'shipped', 'delivered'];
 const STAGE_LABELS = { placed: 'Placed', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered' };
 
@@ -93,10 +100,28 @@ function InfoRow({ label, value, isLast }) {
 export default function OrderDetailScreen() {
   const { id, type } = useLocalSearchParams();
   const router = useRouter();
-  const lists = useSelector(selectDashboardLists);
+  const dispatch = useDispatch();
+  const isService = type === 'service';
 
-  const source = type === 'service' ? lists.bookings : lists.orders;
-  const order = (source || []).find((o) => String(getOrderId(o)) === String(id));
+  const productOrders = useSelector(selectProductOrders);
+  const serviceBookings = useSelector(selectServiceBookings);
+  const current = useSelector(selectCurrentOrder);
+  const currentLoading = useSelector(selectCurrentOrderLoading);
+  const currentError = useSelector(selectCurrentOrderError);
+
+  useEffect(() => {
+    if (!id) return;
+    dispatch(isService ? fetchBookingById(id) : fetchOrderById(id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isService]);
+
+  const listMatch = (isService ? serviceBookings : productOrders).find(
+    (o) => String(getOrderId(o)) === String(id)
+  );
+  // The fetched detail record wins once it's in and actually matches this
+  // screen's id — otherwise (still loading, or the fetch failed) fall
+  // back to whatever the list already has so the screen isn't blank.
+  const order = current && String(getOrderId(current)) === String(id) ? current : listMatch;
 
   const statusKey = normalizeStatus(order?.status);
   const isCancelled = statusKey === 'cancelled';
@@ -111,8 +136,21 @@ export default function OrderDetailScreen() {
   const discount = pricing.discount ?? order?.platformDiscount;
   const total = pricing.total ?? order?.totalAmount ?? order?.total ?? order?.amount;
 
-  const handleUpdateStatus = () =>
-    Alert.alert('Update order status', 'Updating order status is coming soon.');
+  const handleUpdateStatus = () => {
+    const nextIndex = STAGES.indexOf(statusKey) + 1;
+    const nextStatus = STAGES[nextIndex];
+    if (!nextStatus) {
+      Alert.alert('Update order status', 'This order is already at its final stage.');
+      return;
+    }
+    const thunk = isService ? updateBookingStatus : updateOrderStatus;
+    const arg = isService
+      ? { bookingId: id, status: nextStatus }
+      : { orderId: id, status: nextStatus };
+    dispatch(thunk(arg))
+      .unwrap()
+      .catch((message) => Alert.alert('Update failed', message || 'Could not update status.'));
+  };
   const handleContactCustomer = () =>
     Alert.alert('Contact customer', 'Messaging customers directly is coming soon.');
 
@@ -135,7 +173,9 @@ export default function OrderDetailScreen() {
       {!order ? (
         <View style={styles.centered}>
           <Text style={styles.emptyText}>
-            Order not found. Open it from the Orders list to view its details.
+            {currentLoading
+              ? 'Loading order…'
+              : currentError || 'Order not found. Open it from the Orders list to view its details.'}
           </Text>
         </View>
       ) : (
@@ -192,9 +232,15 @@ export default function OrderDetailScreen() {
             <InfoRow label="Vendor" value={vendor} isLast />
           </View>
 
-          <Pressable style={styles.primaryButton} onPress={handleUpdateStatus}>
-            <Text style={styles.primaryButtonText}>Update order status</Text>
-          </Pressable>
+          {!isCancelled && (
+            <Pressable style={styles.primaryButton} onPress={handleUpdateStatus}>
+              <Text style={styles.primaryButtonText}>
+                {STAGES[STAGES.indexOf(statusKey) + 1]
+                  ? `Mark as ${STAGE_LABELS[STAGES[STAGES.indexOf(statusKey) + 1]]}`
+                  : 'Update order status'}
+              </Text>
+            </Pressable>
+          )}
           <Pressable style={styles.secondaryButton} onPress={handleContactCustomer}>
             <Text style={styles.secondaryButtonText}>Contact customer</Text>
           </Pressable>

@@ -14,13 +14,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { colors, spacing } from '../lib/constants/theme';
 import {
-  fetchDashboardBookings,
-  fetchDashboardOrders,
-  selectDashboardErrors,
-  selectDashboardLists,
-  selectDashboardLoading,
-  selectDashboardOverview,
-} from '../store/slices/adminDashboardSlice';
+  fetchProductOrders,
+  fetchServiceBookings,
+  selectProductOrders,
+  selectProductOrdersError,
+  selectProductOrdersLoading,
+  selectServiceBookings,
+  selectServiceBookingsError,
+  selectServiceBookingsLoading,
+} from '../store/slices/ordersSlice';
+import { selectDashboardOverview } from '../store/slices/adminDashboardSlice';
 
 // The real order/booking status enum isn't confirmed yet — these are the
 // four states the mockup shows. Anything else falls back to a neutral
@@ -126,9 +129,12 @@ export default function OrdersScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const lists = useSelector(selectDashboardLists);
-  const loading = useSelector(selectDashboardLoading);
-  const errors = useSelector(selectDashboardErrors);
+  const productOrders = useSelector(selectProductOrders);
+  const productLoading = useSelector(selectProductOrdersLoading);
+  const productError = useSelector(selectProductOrdersError);
+  const serviceBookings = useSelector(selectServiceBookings);
+  const serviceLoading = useSelector(selectServiceBookingsLoading);
+  const serviceError = useSelector(selectServiceBookingsError);
   const overview = useSelector(selectDashboardOverview);
 
   const [tab, setTab] = useState(params?.tab === 'service' ? 'service' : 'product');
@@ -136,9 +142,9 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const isProductTab = tab === 'product';
-  const items = isProductTab ? lists.orders : lists.bookings;
-  const isLoading = isProductTab ? loading.orders : loading.bookings;
-  const errorMessage = isProductTab ? errors.orders : errors.bookings;
+  const items = isProductTab ? productOrders : serviceBookings;
+  const isLoading = isProductTab ? productLoading : serviceLoading;
+  const errorMessage = isProductTab ? productError : serviceError;
   const total = isProductTab ? overview.productOrders.total : overview.serviceBookings.total;
 
   // Explicit params on every call rather than relying on the slice's
@@ -147,7 +153,7 @@ export default function OrdersScreen() {
   // another tab's fetch.
   const runFetch = useCallback(
     (nextTab, nextStatus) => {
-      const thunk = nextTab === 'service' ? fetchDashboardBookings : fetchDashboardOrders;
+      const thunk = nextTab === 'service' ? fetchServiceBookings : fetchProductOrders;
       dispatch(thunk({ page: 1, limit: 50, status: nextStatus }));
     },
     [dispatch]
@@ -168,7 +174,7 @@ export default function OrdersScreen() {
   };
   const handleRefresh = async () => {
     setRefreshing(true);
-    const thunk = isProductTab ? fetchDashboardOrders : fetchDashboardBookings;
+    const thunk = isProductTab ? fetchProductOrders : fetchServiceBookings;
     await dispatch(thunk({ page: 1, limit: 50, status }));
     setRefreshing(false);
   };
