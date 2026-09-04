@@ -21,6 +21,7 @@ import {
   selectDashboardOverview,
 } from '../../store/slices/adminDashboardSlice';
 import { StatusBar } from 'expo-status-bar';
+import log from '../../lib/utils/logger';
 
 // Each Home operations tile links to a management area that doesn't have
 // a screen yet — same "coming soon" treatment as the More menu's rows
@@ -165,21 +166,20 @@ export default function DashboardScreen() {
         </View>
       )}
 
+       <Text style={styles.sectionLabel}>OVERVIEW</Text>
+
       <View style={styles.statsGrid}>
-        <StatCard label="Users" value={overview.users.total} dotColor={colors.primary} />
-        <StatCard label="Verified" value={overview.vendors.verified} dotColor={colors.success} />
-        <StatCard label="Pending" value={overview.vendors.pending} dotColor={colors.warning} />
-        <StatCard label="Suspended" value={overview.vendors.suspended} dotColor={colors.danger} />
+        <StatCard label="Users" value={overview?.users?.total} dotColor={colors.primary} />
+        <StatCard label="Vendors" value={overview?.vendors?.total} dotColor={colors.success} />
+        <StatCard label="Admins" value={overview?.admins?.total} dotColor={colors.warning} />
+        <StatCard label="Reports" value={overview?.total?.total} dotColor={colors.warning} />
+        <StatCard label="Products" value={overview?.products?.active} dotColor={colors.success} />
+        <StatCard label="Services" value={overview?.services?.total} dotColor={colors.success} />
+        <StatCard label="Product Orders" value={overview?.productOrders?.total} dotColor={colors.success} />
+        <StatCard label="Service Bookings" value={overview?.serviceBookings?.total} dotColor={colors.success} />
       </View>
 
-      <View style={styles.highlightsCard}>
-        <Text style={styles.highlightsTitle}>HIGHLIGHTS</Text>
-        <HighlightRow label="Pending vendors" value={overview.vendors.pending} />
-        <HighlightRow label="Blocked users" value={overview.users.blocked} />
-        <HighlightRow label="Total orders" value={overview.productOrders.total} isLast />
-      </View>
-
-      <Text style={styles.sectionLabel}>OPERATIONS</Text>
+    <Text style={styles.sectionLabel}>OPERATIONS</Text>
       <View style={styles.opsGrid}>
         {OPERATIONS.map((op) => (
           <OperationTile
@@ -190,6 +190,8 @@ export default function DashboardScreen() {
           />
         ))}
       </View>
+
+
       </ScrollView>
     </SafeAreaView>
   );
