@@ -22,18 +22,27 @@ import {
 } from '../store/slices/productsSlice';
 import { selectDashboardOverview } from '../store/slices/adminDashboardSlice';
 
+// Matches the Product schema's real `status` enum exactly
+// (server/newSchemaModels/schemas/product/productSchema.js) — this is
+// what getProductsList's `status` query param actually filters on.
+// 'live' was never a real value here.
 const STATUS_FILTERS = [
   { label: 'All', value: '' },
-  { label: 'Live', value: 'live' },
-  { label: 'Pending review', value: 'pending' },
+  { label: 'Active', value: 'active' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Draft', value: 'draft' },
   { label: 'Rejected', value: 'rejected' },
+  { label: 'Inactive', value: 'inactive' },
+  { label: 'Out of stock', value: 'outOfStock' },
 ];
 
 const STATUS_STYLES = {
-  live: { bg: colors.successMuted, fg: colors.success, label: 'Live' },
+  active: { bg: colors.successMuted, fg: colors.success, label: 'Active' },
   pending: { bg: colors.warningMuted, fg: colors.warning, label: 'Pending' },
-  pendingreview: { bg: colors.warningMuted, fg: colors.warning, label: 'Pending' },
+  draft: { bg: colors.warningMuted, fg: colors.warning, label: 'Draft' },
   rejected: { bg: colors.dangerMuted, fg: colors.danger, label: 'Rejected' },
+  inactive: { bg: colors.background, fg: colors.textMuted, label: 'Inactive' },
+  outofstock: { bg: colors.dangerMuted, fg: colors.danger, label: 'Out of stock' },
 };
 
 function normalizeStatus(status) {
@@ -68,18 +77,18 @@ function FilterChip({ label, active, onPress }) {
   );
 }
 
-// There's no product detail screen/backend yet, so a row is a plain
-// (non-Pressable) card rather than a dead-end tap — same approach this
-// project used for vendors/users before their detail screens existed.
-function ProductRow({ product }) {
+// Matches the real list projection from getProductsList/mapProduct
+// (server/controllers/admin/adminController.js): title, sku,
+// categoryPrimary/categorySecondary, brand, stock, price, status,
+// createdAt. There's no vendor name in that projection (only a bare
+// vendorId), so the row shows category/brand/SKU instead of a vendor.
+function ProductRow({ product, onPress }) {
   const id = getProductId(product);
-  const name = product?.name || product?.title || 'Unnamed product';
-  const vendor = product?.vendorName || product?.vendor?.businessName || product?.vendor?.name || '';
-  const category = product?.category || '';
-  const meta = [vendor, category].filter(Boolean).join('  ·  ');
+  const name = product?.title || 'Unnamed product';
+  const meta = [product?.categoryPrimary, product?.brand].filter(Boolean).join('  ·  ');
 
   return (
-    <View style={styles.row}>
+    <Pressable style={styles.row} onPress={onPress}>
       <View style={[styles.thumb, { backgroundColor: getAvatarColor(id || name) }]} />
       <View style={styles.rowBody}>
         <Text style={styles.rowName} numberOfLines={1}>
@@ -93,7 +102,7 @@ function ProductRow({ product }) {
         <Text style={styles.rowPrice}>{formatAmount(product?.price)}</Text>
       </View>
       <StatusBadge status={product?.status} />
-    </View>
+    </Pressable>
   );
 }
 
@@ -185,7 +194,15 @@ export default function ProductsScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
           }
-          renderItem={({ item }) => <ProductRow product={item} />}
+          renderItem={({ item }) => (
+            <ProductRow
+              product={item}
+              onPress={() => {
+                const productId = getProductId(item);
+                if (productId) router.push(`/products/${productId}`);
+              }}
+            />
+          )}
           ListEmptyComponent={
             loading ? (
               <View style={styles.emptyState}>

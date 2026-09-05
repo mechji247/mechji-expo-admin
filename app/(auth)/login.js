@@ -50,13 +50,18 @@ export default function LoginScreen() {
     );
 
     if (adminLogin.fulfilled.match(result)) {
+      
+      if (result.payload?.mfaRequired) {
+        return router.replace('/mfa');
+      }
+
       if (result.payload?.accessToken) {
         try {
           await saveTokens({
             accessToken: result.payload.accessToken,
             refreshToken: result.payload.refreshToken,
           });
-         return router.replace('/');
+          return router.replace('/');
         } catch (err) {
           log.error('Failed to persist admin session tokens', err?.message || err);
         }
