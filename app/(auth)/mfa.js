@@ -27,6 +27,7 @@ import { saveTokens } from '../../lib/tokens/secureTokens';
 import log from '../../lib/utils/logger';
 
 const CODE_LENGTH = 6;
+const MAX_MFA_ATTEMPTS = 5;
 
 function useBlinkingCursor(active) {
   const opacity = useRef(new Animated.Value(1)).current;
@@ -68,6 +69,11 @@ export default function MfaScreen() {
 
   const [code, setCode] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  // Wrong-OTP attempts on THIS mfa screen instance. Resets to 0 whenever the
+  // screen remounts (a fresh login -> new challengeToken), never persisted.
+  // The admin stays on this screen and can keep retrying after each wrong
+  // entry until all 5 are used, then they're sent back to login to start over.
+  const [attemptsUsed, setAttemptsUsed] = useState(0);
   const inputRef = useRef(null);
   const cursorOpacity = useBlinkingCursor(isFocused && !loading);
 
@@ -89,7 +95,7 @@ export default function MfaScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!isCodeValid || loading) return;
+    if (!isCodeValid || loading || attemptsUsed >= MAX_MFA_ATTEMPTS) return;
 
     const result = await dispatch(
       verifyAdminMfa({ challengeToken, emailOtp: code, clientType: 'expo' })
@@ -115,10 +121,34 @@ export default function MfaScreen() {
     dispatch(clearAdminError());
     setCode('');
 
+    const isLockedMessage = /locked/i.test(result.payload || '');
+
+    if (isLockedMessage) {
+      Alert.alert(
+        'MFA locked',
+        result.payload || 'MFA is temporarily locked. Please sign in again later.',
+        [{ text: 'OK', onPress: goBackToLogin }]
+      );
+      return;
+    }
+
+    const newAttemptsUsed = attemptsUsed + 1;
+    setAttemptsUsed(newAttemptsUsed);
+    const attemptsRemaining = MAX_MFA_ATTEMPTS - newAttemptsUsed;
+
+    if (attemptsRemaining <= 0) {
+      Alert.alert(
+        'Too many incorrect attempts',
+        'You have used all 5 attempts to verify this code. Please sign in again.',
+        [{ text: 'OK', onPress: goBackToLogin }]
+      );
+      return;
+    }
+
     Alert.alert(
       'Incorrect code',
-      result.payload || 'The OTP you entered was incorrect. Please sign in again.',
-      [{ text: 'OK', onPress: goBackToLogin }]
+      `${result.payload || 'The OTP you entered was incorrect.'} You have ${attemptsRemaining} attempt${attemptsRemaining === 1 ? '' : 's'} remaining.`,
+      [{ text: 'OK', onPress: focusInput }]
     );
   };
 
@@ -174,19 +204,28 @@ export default function MfaScreen() {
             onChangeText={handleChangeCode}
             keyboardType="number-pad"
             maxLength={CODE_LENGTH}
-            editable={!loading}
+            editable={!loading && attemptsUsed < MAX_MFA_ATTEMPTS}
             onSubmitEditing={handleSubmit}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             autoFocus
             caretHidden
           />
+
+          {attemptsUsed > 0 && attemptsUsed < MAX_MFA_ATTEMPTS ? (
+            <Text style={styles.attemptsText}>
+              {MAX_MFA_ATTEMPTS - attemptsUsed} attempt{MAX_MFA_ATTEMPTS - attemptsUsed === 1 ? '' : 's'} remaining
+            </Text>
+          ) : null}
         </View>
 
         <Pressable
-          style={[styles.button, (!isCodeValid || loading) && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            (!isCodeValid || loading || attemptsUsed >= MAX_MFA_ATTEMPTS) && styles.buttonDisabled,
+          ]}
           onPress={handleSubmit}
-          disabled={!isCodeValid || loading}
+          disabled={!isCodeValid || loading || attemptsUsed >= MAX_MFA_ATTEMPTS}
         >
           {loading ? (
             <ActivityIndicator color={colors.surface} />
@@ -279,6 +318,12 @@ const styles = StyleSheet.create({
     width: 1,
     height: 1,
     opacity: 0,
+  },
+  attemptsText: {
+    marginTop: spacing.sm,
+    fontSize: 12,
+    color: colors.danger,
+    textAlign: 'center',
   },
   button: {
     marginTop: spacing.sm,
