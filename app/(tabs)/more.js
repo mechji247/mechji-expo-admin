@@ -11,6 +11,7 @@ const COMMERCE_ROWS = [
   { key: 'orders', label: 'Orders', icon: 'receipt-outline', route: '/orders' },
   { key: 'bookings', label: 'Service bookings', icon: 'calendar-outline', route: '/orders?tab=service' },
   { key: 'products', label: 'Products', icon: 'reader-outline', route: '/products' },
+  { key: 'services', label: 'Services', icon: 'construct-outline', route: '/services' },
   { key: 'subscriptions', label: 'Subscriptions', icon: 'card-outline', route: '/subscriptions' },
   { key: 'promotions', label: 'Promotions', icon: 'pricetag-outline', route: '/promotions' },
 ];

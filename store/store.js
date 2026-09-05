@@ -15,6 +15,7 @@ import chatReducer from './slices/chatSlice';
 import trustSafetyReducer from './slices/trustSafetySlice';
 import ordersReducer from './slices/ordersSlice';
 import productsReducer from './slices/productsSlice';
+import servicesReducer from './slices/servicesSlice';
 
 
 export const store = configureStore({
@@ -34,5 +35,6 @@ export const store = configureStore({
     trustSafety: trustSafetyReducer,
     orders: ordersReducer,
     products: productsReducer,
+    services: servicesReducer,
   },
 });
