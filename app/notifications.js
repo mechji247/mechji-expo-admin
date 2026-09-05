@@ -1,47 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
 import { colors, spacing } from '../lib/constants/theme';
-
-// No broadcast-notifications endpoint exists yet — this renders the
-// mockup's sample alerts as static placeholder data, split by audience
-// tab. Swap in a real fetch (and wire the "+" button to a real send
-// flow) once that endpoint exists.
-const NOTIFICATIONS = {
-  users: [
-    {
-      id: '1',
-      icon: 'cube-outline',
-      iconColor: colors.info,
-      iconBg: colors.infoMuted,
-      title: 'Festive sale live now',
-      body: '"Up to 40% off across 200+ vendors this weekend."',
-      meta: 'Sent to all users · Sent today, 9:00 am · 128,340 delivered',
-    },
-    {
-      id: '2',
-      icon: 'checkmark',
-      iconColor: colors.success,
-      iconBg: colors.successMuted,
-      title: 'Order delivered',
-      body: '"Your order ORD-88207 has been delivered."',
-      meta: 'Auto-notification · Sent yesterday · triggered by system',
-    },
-    {
-      id: '3',
-      icon: 'phone-portrait-outline',
-      iconColor: colors.danger,
-      iconBg: colors.dangerMuted,
-      title: 'Account restriction notice',
-      body: '"Your account has limited access — contact support."',
-      meta: 'Sent to Simran Oberoi · Sent 2 days ago · triggered by Sameer Dutta',
-    },
-  ],
-  vendors: [],
-  admins: [],
-};
+import {
+  fetchNotifications,
+  selectNotificationsLists,
+  selectNotificationsLoading,
+} from '../store/slices/notificationsSlice';
 
 const AUDIENCE_TABS = [
   { label: 'Users', value: 'users' },
@@ -49,26 +17,76 @@ const AUDIENCE_TABS = [
   { label: 'Admins', value: 'admins' },
 ];
 
-function NotificationCard({ item }) {
+// Icon/color per event type — 'admins' tab items are either a manual
+// admin-composed broadcast (no eventType) or a system-triggered alert
+// (server/push_notifications/handlers/adminAlerts).
+const EVENT_STYLE = {
+  vendor_registration: { icon: 'storefront-outline', color: colors.info, bg: colors.infoMuted },
+  new_product: { icon: 'cube-outline', color: colors.info, bg: colors.infoMuted },
+  new_service: { icon: 'construct-outline', color: colors.info, bg: colors.infoMuted },
+  new_report: { icon: 'flag-outline', color: colors.danger, bg: colors.dangerMuted },
+  default: { icon: 'megaphone-outline', color: colors.primary, bg: colors.infoMuted },
+};
+
+const formatRelativeTime = (isoDate) => {
+  if (!isoDate) return '';
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+};
+
+function NotificationCard({ item, onPress }) {
+  const style = EVENT_STYLE[item.eventType] || EVENT_STYLE.default;
   return (
-    <View style={styles.card}>
-      <View style={[styles.iconCircle, { backgroundColor: item.iconBg }]}>
-        <Ionicons name={item.icon} size={18} color={item.iconColor} />
+    <Pressable style={styles.card} onPress={onPress}>
+      <View style={[styles.iconCircle, { backgroundColor: style.bg }]}>
+        <Ionicons name={style.icon} size={18} color={style.color} />
       </View>
       <View style={styles.cardBody}>
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text style={styles.cardText}>{item.body}</Text>
-        <Text style={styles.cardMeta}>{item.meta}</Text>
+        <Text style={styles.cardMeta}>{formatRelativeTime(item.createdAt)}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const [audience, setAudience] = useState('users');
+  const dispatch = useDispatch();
+  const [audience, setAudience] = useState('admins');
+  const [refreshing, setRefreshing] = useState(false);
+  const lists = useSelector(selectNotificationsLists);
+  const loadingByAudience = useSelector(selectNotificationsLoading);
+
+  const items = lists[audience] || [];
+  const loading = loadingByAudience[audience] && !items.length;
+
+  useEffect(() => {
+    dispatch(fetchNotifications({ audience }));
+  }, [audience, dispatch]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await dispatch(fetchNotifications({ audience }));
+    setRefreshing(false);
+  };
 
   const handleCompose = () => Alert.alert('New notification', 'Sending a broadcast is coming soon.');
+
+  const handleItemPress = (item) => {
+    if (!item.navigate || !item.targetId) return;
+    // trust-safety/vendor/product screens each own their route shape —
+    // reuse the same event-type → route mapping the push tap handler uses.
+    if (item.eventType === 'vendor_registration') router.push(`/vendors/${item.targetId}`);
+    else if (item.eventType === 'new_product') router.push(`/products/${item.targetId}`);
+    else if (item.eventType === 'new_report') router.push('/trust-safety');
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -100,17 +118,26 @@ export default function NotificationsScreen() {
           ))}
         </View>
 
-        <FlatList
-          data={NOTIFICATIONS[audience]}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => <NotificationCard item={item} />}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No notifications sent to {audience} yet.</Text>
-            </View>
-          }
-        />
+        {loading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={items}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => <NotificationCard item={item} onPress={() => handleItemPress(item)} />}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No notifications for {audience} yet.</Text>
+              </View>
+            }
+          />
+        )}
       </View>
     </SafeAreaView>
   );

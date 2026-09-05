@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import adminApi from '../../lib/services/adminApi';
+import { unregisterAdminPushToken } from '../../lib/services/pushNotifications';
 
 const initialState = {
   adminInfo: null,
@@ -87,6 +88,11 @@ export const adminLogout = createAsyncThunk(
   'mechjiAdmin/logout',
   async (_, { rejectWithValue }) => {
     try {
+      // Deactivate this device's push token first, while the access token
+      // used to authenticate the request is still valid — best-effort,
+      // never blocks logout on failure.
+      await unregisterAdminPushToken();
+
       const response = await adminApi.post(`/auth/logout`);
       return response.data;
     } catch (error) {
