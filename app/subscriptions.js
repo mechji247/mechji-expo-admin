@@ -1,75 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../lib/constants/theme';
 
-// No list-plans/list-vendor-subscriptions endpoint exists yet — only a
-// per-vendor cancelVendorSubscription action does (adminVendorSlice).
-// This renders the mockup's sample plans/subscriptions as static
-// placeholder data; swap in a real fetch once a billing endpoint exists.
-const PLANS = [
-  { id: 'basic', name: 'Basic', price: '₹499/mo', vendorCount: 22 },
-  { id: 'pro', name: 'Pro', price: '₹1,499/mo', vendorCount: 19, highlighted: true },
-  { id: 'elite', name: 'Elite', price: '₹3,999/mo', vendorCount: 5 },
-];
-
-const VENDOR_SUBSCRIPTIONS = [
-  { id: '1', vendor: 'Copperleaf Interiors', plan: 'Pro', detail: 'renews 14 Sep', status: 'active' },
-  { id: '2', vendor: 'Voltage Fix Electricians', plan: 'Basic', detail: 'renews 4 Sep', status: 'expiring' },
-  { id: '3', vendor: 'Terra Clay Pottery', plan: 'Basic', detail: 'lapsed 28 Aug', status: 'expired' },
-];
-
-const STATUS_STYLES = {
-  active: { bg: colors.successMuted, fg: colors.success, label: 'Active' },
-  expiring: { bg: colors.warningMuted, fg: colors.warning, label: 'Expiring' },
-  expired: { bg: colors.dangerMuted, fg: colors.danger, label: 'Expired' },
-};
-
-function StatusBadge({ status }) {
-  const style = STATUS_STYLES[status] || { bg: colors.background, fg: colors.textMuted, label: status };
-  return (
-    <View style={[styles.statusBadge, { backgroundColor: style.bg }]}>
-      <Text style={[styles.statusBadgeText, { color: style.fg }]}>{style.label}</Text>
-    </View>
-  );
-}
-
-function PlanRow({ plan, onPress }) {
-  return (
-    <Pressable style={[styles.planRow, plan.highlighted && styles.planRowHighlighted]} onPress={onPress}>
-      <View>
-        <Text style={styles.planName}>{plan.name}</Text>
-        <Text style={styles.planMeta}>
-          {plan.price} · {plan.vendorCount} vendors
-        </Text>
-      </View>
-      <Ionicons name="arrow-forward" size={18} color={colors.text} />
-    </Pressable>
-  );
-}
-
-function VendorSubscriptionRow({ sub }) {
-  return (
-    <View style={styles.subRow}>
-      <View style={styles.subBody}>
-        <Text style={styles.subVendor} numberOfLines={1}>
-          {sub.vendor}
-        </Text>
-        <Text style={styles.subMeta}>
-          {sub.plan} · {sub.detail}
-        </Text>
-      </View>
-      <StatusBadge status={sub.status} />
-    </View>
-  );
-}
-
 export default function SubscriptionsScreen() {
   const router = useRouter();
-
-  const handlePlanPress = (plan) =>
-    Alert.alert(plan.name, 'Editing plan pricing and limits is coming soon.');
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -84,21 +20,19 @@ export default function SubscriptionsScreen() {
           </View>
         </View>
 
-        <FlatList
-          data={VENDOR_SUBSCRIPTIONS}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          ListHeaderComponent={
-            <>
-              <Text style={styles.sectionLabel}>PLANS</Text>
-              {PLANS.map((plan) => (
-                <PlanRow key={plan.id} plan={plan} onPress={() => handlePlanPress(plan)} />
-              ))}
-              <Text style={styles.sectionLabel}>VENDOR SUBSCRIPTIONS</Text>
-            </>
-          }
-          renderItem={({ item }) => <VendorSubscriptionRow sub={item} />}
-        />
+        <View style={styles.manageCard}>
+          <View style={styles.manageIcon}>
+            <Ionicons name="card-outline" size={26} color={colors.primary} />
+          </View>
+          <Text style={styles.manageTitle}>Subscription plan management</Text>
+          <Text style={styles.manageCopy}>
+            Create, edit, activate, or retire vendor plans. Plan pricing uses the backend’s base currency and the shared product/service commission rule.
+          </Text>
+          <Pressable style={styles.manageButton} onPress={() => router.push('/subscriptions/manage')}>
+            <Text style={styles.manageButtonText}>Manage subscription plans</Text>
+            <Ionicons name="arrow-forward" size={18} color={colors.surface} />
+          </Pressable>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -112,6 +46,12 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 22, fontWeight: '700', color: colors.text },
   headerSubtitle: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   listContent: { paddingBottom: spacing.xl },
+  manageCard: { marginTop: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: spacing.lg },
+  manageIcon: { alignSelf: 'flex-start', padding: spacing.sm, borderRadius: 12, backgroundColor: colors.primaryMuted, marginBottom: spacing.md },
+  manageTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  manageCopy: { color: colors.textMuted, fontSize: 13, lineHeight: 19, marginTop: spacing.sm },
+  manageButton: { marginTop: spacing.lg, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 12 },
+  manageButtonText: { color: colors.surface, fontWeight: '800', fontSize: 14 },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
