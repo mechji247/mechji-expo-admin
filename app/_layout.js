@@ -1,4 +1,5 @@
-import { Stack , useRouter , useSegments } from 'expo-router';
+import { Stack , useRouter , useSegments, useRootNavigationState } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { StatusBar } from "expo-status-bar";
 import { useEffect , useRef , useState } from "react";
 import { ActivityIndicator, AppState, View } from "react-native";
@@ -10,12 +11,7 @@ import { store } from '../store/store';
 import {  clearTokens, hasStoredSession, saveTokens} from '../lib/tokens/secureTokens';
 import { registerAdminPushToken, addNotificationResponseListener } from '../lib/services/pushNotifications';
 
-// Where a tap on a push notification should land, keyed by the `type`
-// (eventType) the backend puts in the payload's data — see
-// server/push_notifications/handlers/adminAlerts. Purely a client-side
-// routing concern: the payload only needs to say what happened and which
-// record, not which screen renders it. new_service/new_report don't have
-// a dedicated detail screen yet, so they land on the closest list screen.
+
 const EVENT_ROUTE_MAP = {
   vendor_registration: (targetId) => (targetId ? `/vendors/${targetId}` : '/vendors'),
   new_product: (targetId) => (targetId ? `/products/${targetId}` : '/products'),
@@ -23,12 +19,7 @@ const EVENT_ROUTE_MAP = {
   new_report: () => '/trust-safety',
 };
 
-// The admin-access JWT expires after 15 minutes (server/utils/adminJwt.js).
-// Silently refresh it a minute early — while the app is open AND in the
-// foreground — so an admin who's actively using the app never hits a 401
-// mid-action. Backgrounding the app pauses this (nothing to refresh for),
-// and coming back to the foreground checks immediately in case the window
-// already elapsed while backgrounded.
+
 const SESSION_REFRESH_INTERVAL_MS = 14 * 60 * 1000;
 
 function RootNavigator () {
@@ -38,6 +29,9 @@ function RootNavigator () {
         const isBootstrapping = useSelector(selectAdminRefreshLoading);
         const segments = useSegments();
         const router = useRouter();
+        const rootNavigation = useRootNavigationState();
+        const [pendingNotification, setPendingNotification] = useState(null);
+        const lastNotification = useRef(null);
 
         const startAdminSession = async () => {
               try {
@@ -82,11 +76,7 @@ function RootNavigator () {
         const refreshIntervalRef = useRef(null);
         const isRefreshingRef = useRef(false);
 
-        // Refresh once "now" — used both by the interval tick and by the
-        // app-foreground handler. Guarded against overlap (e.g. a resume
-        // firing right as a scheduled tick was about to) and, on a real
-        // failure (not just "nothing to refresh yet"), tears the session
-        // down the same way startAdminSession does on a failed refresh.
+  
         const refreshSessionNow = async () => {
           if (isRefreshingRef.current) return;
           isRefreshingRef.current = true;
@@ -123,9 +113,7 @@ function RootNavigator () {
           refreshIntervalRef.current = setInterval(refreshSessionNow, SESSION_REFRESH_INTERVAL_MS);
         };
 
-        // Only run this while actually logged in, and only while the app is
-        // in the foreground — pause on background, resume (with an
-        // immediate check) on foreground.
+      
         useEffect(() => {
           if (status !== 'authenticated') {
             stopRefreshInterval();
@@ -151,30 +139,41 @@ function RootNavigator () {
           };
         }, [status]);
 
-        // Register this device for admin push notifications once signed in.
-        // Safe to fire on every transition into 'authenticated' (a fresh
-        // login, or the bootstrap refresh above succeeding) — the backend
-        // upserts by device, so re-registering the same device is a no-op.
+      
         useEffect(() => {
           if (status !== 'authenticated') return;
           registerAdminPushToken();
+          const token = Notifications.addPushTokenListener(() => registerAdminPushToken({ requestPermission: false }));
+          const app = AppState.addEventListener('change', state => {
+            if (state === 'active') registerAdminPushToken({ requestPermission: false });
+          });
+          return () => { token.remove(); app.remove(); };
         }, [status]);
 
-        // Tapping a push notification (app backgrounded, or opened cold
-        // from a tap) navigates to the relevant screen. Set up once —
-        // doesn't depend on auth status since a tap can also arrive right
-        // as the app is still bootstrapping.
+  
         useEffect(() => {
-          const subscription = addNotificationResponseListener((response) => {
+          let active = true;
+          const receive = (response) => {
+            if (!active || !response) return;
+            const identifier = response.notification?.request?.identifier;
+            if (identifier === lastNotification.current) return;
+            lastNotification.current = identifier;
             const data = response?.notification?.request?.content?.data || {};
             const resolveRoute = EVENT_ROUTE_MAP[data.type];
-            if (resolveRoute) {
-              router.push(resolveRoute(data.targetId));
-            }
-          });
+            setPendingNotification(resolveRoute ? resolveRoute(encodeURIComponent(String(data.targetId || ''))) : '/notifications');
+          };
+          const subscription = addNotificationResponseListener(receive);
+          Notifications.getLastNotificationResponseAsync().then(receive).catch(() => {});
 
-          return () => subscription.remove();
+          return () => { active = false; subscription.remove(); };
         }, []);
+
+        useEffect(() => {
+          if (loading || status !== 'authenticated' || !rootNavigation?.key || !pendingNotification) return;
+          router.push(pendingNotification);
+          setPendingNotification(null);
+          Notifications.clearLastNotificationResponseAsync().catch(() => {});
+        }, [loading, status, rootNavigation?.key, pendingNotification, router]);
 
         if (loading) {
           return (

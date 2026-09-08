@@ -1,8 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import axios from 'axios';
-import { backendUrl } from '../../lib/utils/env';
+import adminApi from '../../lib/services/adminApi';
 
-const API_BASE = `${backendUrl}/api/legal/admin`;
+const API_BASE = "/legal";
 
 export const LEGAL_DOC_TYPES = [
   'privacy-policy',
@@ -61,7 +60,7 @@ export const fetchLegalDocuments = createAsyncThunk(
   'legalAdmin/fetchLegalDocuments',
   async ({ filters = {} } = {}, thunkAPI) => {
     try {
-      const { data } = await axios.get(`${API_BASE}/all`, buildAuthConfig(filters));
+      const { data } = await adminApi.get(`${API_BASE}/all`, buildAuthConfig(filters));
       return data;
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorPayload(error));
@@ -73,7 +72,7 @@ export const fetchLegalDocumentById = createAsyncThunk(
   'legalAdmin/fetchLegalDocumentById',
   async ({ id }, thunkAPI) => {
     try {
-      const { data } = await axios.get(`${API_BASE}/${id}`, buildAuthConfig());
+      const { data } = await adminApi.get(`${API_BASE}/${id}`, buildAuthConfig());
       return data;
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorPayload(error));
@@ -85,7 +84,7 @@ export const createLegalDocument = createAsyncThunk(
   'legalAdmin/createLegalDocument',
   async ({ payload }, thunkAPI) => {
     try {
-      const { data } = await axios.post(`${API_BASE}`, payload, {
+      const { data } = await adminApi.post(`${API_BASE}`, payload, {
         withCredentials: true,
       });
       return data;
@@ -99,7 +98,7 @@ export const updateLegalDocument = createAsyncThunk(
   'legalAdmin/updateLegalDocument',
   async ({ id, payload }, thunkAPI) => {
     try {
-      const { data } = await axios.patch(`${API_BASE}/${id}`, payload, {
+      const { data } = await adminApi.patch(`${API_BASE}/${id}`, payload, {
         withCredentials: true,
       });
       return data;
@@ -113,7 +112,7 @@ export const publishLegalDocument = createAsyncThunk(
   'legalAdmin/publishLegalDocument',
   async ({ id }, thunkAPI) => {
     try {
-      const { data } = await axios.patch(
+      const { data } = await adminApi.patch(
         `${API_BASE}/${id}/publish`,
         {},
         { withCredentials: true }
@@ -129,7 +128,7 @@ export const archiveLegalDocument = createAsyncThunk(
   'legalAdmin/archiveLegalDocument',
   async ({ id }, thunkAPI) => {
     try {
-      const { data } = await axios.patch(
+      const { data } = await adminApi.patch(
         `${API_BASE}/${id}/archive`,
         {},
         { withCredentials: true }
@@ -145,7 +144,7 @@ export const deleteLegalDocument = createAsyncThunk(
   'legalAdmin/deleteLegalDocument',
   async ({ id }, thunkAPI) => {
     try {
-      const { data } = await axios.delete(`${API_BASE}/${id}`, {
+      const { data } = await adminApi.delete(`${API_BASE}/${id}`, {
         withCredentials: true,
       });
       return { ...data, id };
@@ -159,7 +158,7 @@ export const cloneLegalDocumentDraft = createAsyncThunk(
   'legalAdmin/cloneLegalDocumentDraft',
   async ({ id }, thunkAPI) => {
     try {
-      const { data } = await axios.post(
+      const { data } = await adminApi.post(
         `${API_BASE}/${id}/clone-draft`,
         {},
         { withCredentials: true }
