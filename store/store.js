@@ -16,6 +16,7 @@ import trustSafetyReducer from './slices/trustSafetySlice';
 import ordersReducer from './slices/ordersSlice';
 import productsReducer from './slices/productsSlice';
 import servicesReducer from './slices/servicesSlice';
+import adminNotificationInboxReducer from './slices/adminNotificationInboxSlice';
 
 
 export const store = configureStore({
@@ -30,11 +31,15 @@ export const store = configureStore({
     subscriptions: subscriptionsReducer,
     reviews: reviewsReducer,
     promotions: promotionsReducer,
+    // Outbox/broadcast composer (app/notifications.js) — distinct from the
+    // personal inbox below.
     notifications: notificationsReducer,
     chat: chatReducer,
     trustSafety: trustSafetyReducer,
     orders: ordersReducer,
     products: productsReducer,
     services: servicesReducer,
+    // The admin's own read/unread inbox (app/notifications-inbox.js).
+    adminNotificationInbox: adminNotificationInboxReducer,
   },
 });

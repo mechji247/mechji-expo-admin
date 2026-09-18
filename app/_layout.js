@@ -9,13 +9,14 @@ import { colors } from '../lib/constants/theme';
 import { selectAdminStatus , selectAdminRefreshLoading, refreshAdminSession, resetAdminAuthState } from '../store/slices/adminSlice';
 import { store } from '../store/store';
 import {  clearTokens, hasStoredSession, saveTokens} from '../lib/tokens/secureTokens';
-import { registerAdminPushToken, addNotificationResponseListener } from '../lib/services/pushNotifications';
+import { registerAdminPushToken, addNotificationResponseListener, addNotificationReceivedListener } from '../lib/services/pushNotifications';
+import { fetchUnreadCount as fetchAdminNotificationUnreadCount } from '../store/slices/adminNotificationInboxSlice';
 
 
 const EVENT_ROUTE_MAP = {
   vendor_registration: (targetId) => (targetId ? `/vendors/${targetId}` : '/vendors'),
   new_product: (targetId) => (targetId ? `/products/${targetId}` : '/products'),
-  new_service: () => '/notifications',
+  new_service: (targetId) => (targetId ? `/services/${targetId}` : '/services'),
   new_report: () => '/trust-safety',
 };
 
@@ -167,6 +168,21 @@ function RootNavigator () {
 
           return () => { active = false; subscription.remove(); };
         }, []);
+
+        // A push that arrives while the app is already in the foreground —
+        // refresh only the unread COUNT (never the full inbox list), same
+        // "don't fetch full history just for the badge" rule the other role
+        // apps' foreground handlers follow. There's no Socket.IO client for
+        // admins today (see server/sockets/utils/notificationEmit.js), so
+        // this is the admin app's only source of a live badge update short
+        // of the admin manually reopening the inbox screen.
+        useEffect(() => {
+          if (status !== 'authenticated') return undefined;
+          const subscription = addNotificationReceivedListener(() => {
+            dispatch(fetchAdminNotificationUnreadCount());
+          });
+          return () => subscription.remove();
+        }, [status, dispatch]);
 
         useEffect(() => {
           if (loading || status !== 'authenticated' || !rootNavigation?.key || !pendingNotification) return;

@@ -21,7 +21,8 @@ const PEOPLE_ROWS = [
   { key: 'adminTeam', label: 'Admin team', icon: 'person-add-outline', route: '/admins' },
   { key: 'reviews', label: 'Reviews', icon: 'star-outline', route: '/reviews' },
   { key: 'chats', label: 'Chats', icon: 'chatbubble-outline', route: '/chats' },
-  { key: 'notifications', label: 'Notifications', icon: 'notifications-outline', route: '/notifications' },
+  { key: 'notifications', label: 'Notifications', icon: 'notifications-outline', route: '/notifications-inbox' },
+  { key: 'broadcasts', label: 'Broadcasts', icon: 'megaphone-outline', route: '/notifications' },
   { key: 'trustSafety', label: 'Trust & safety reports', icon: 'time-outline', route: '/trust-safety' },
 ];
 

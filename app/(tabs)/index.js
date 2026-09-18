@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,6 +21,10 @@ import {
   selectDashboardLoading,
   selectDashboardOverview,
 } from '../../store/slices/adminDashboardSlice';
+import {
+  fetchUnreadCount as fetchAdminNotificationUnreadCount,
+  selectAdminNotificationUnreadCount,
+} from '../../store/slices/adminNotificationInboxSlice';
 import { StatusBar } from 'expo-status-bar';
 import log from '../../lib/utils/logger';
 
@@ -86,15 +91,21 @@ function OperationTile({ label, icon, onPress }) {
 
 export default function DashboardScreen() {
   const dispatch = useDispatch();
+  const router = useRouter();
   const adminInfo = useSelector(selectAdminInfo);
   const overview = useSelector(selectDashboardOverview);
   const loading = useSelector(selectDashboardLoading);
   const errors = useSelector(selectDashboardErrors);
+  const unreadNotificationCount = useSelector(selectAdminNotificationUnreadCount);
 
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const loadDashboard = useCallback(() => {
     dispatch(fetchDashboardBootstrap()).finally(() => setHasLoadedOnce(true));
+  }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchAdminNotificationUnreadCount());
   }, [dispatch]);
 
   useEffect(() => {
@@ -144,11 +155,15 @@ export default function DashboardScreen() {
         </View>
         <Pressable
           style={styles.bellButton}
-          onPress={() => handleComingSoon('Notifications')}
+          onPress={() => router.push('/notifications-inbox')}
           hitSlop={8}
         >
           <Ionicons name="notifications-outline" size={20} color={colors.text} />
-          <View style={styles.bellDot} />
+          {unreadNotificationCount > 0 ? (
+            <View style={styles.bellBadge}>
+              <Text style={styles.bellBadgeText}>{unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}</Text>
+            </View>
+          ) : null}
         </Pressable>
       </View>
 
@@ -259,14 +274,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bellDot: {
+  bellBadge: {
     position: 'absolute',
-    top: 9,
-    right: 10,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
     backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.surface,
+    lineHeight: 11,
   },
   searchBar: {
     flexDirection: 'row',
