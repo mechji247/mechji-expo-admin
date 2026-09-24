@@ -929,9 +929,11 @@ export default function VendorDetailScreen() {
           </SectionCard>
 
           <SectionCard title="Commission">
-            <InfoRow label="Flat rate" value={formatCurrency(commission.flatRate)} />
-            <InfoRow label="Percentage rate" value={commission.percentageRate != null ? `${commission.percentageRate}%` : '—'} />
-            <InfoRow label="Service rate" value={commission.serviceRate != null ? `${commission.serviceRate}%` : '—'} />
+            {/* Commission is a single percentage set on the vendor's subscription plan. */}
+            <InfoRow label="Rate" value={`Set by the ${subscription.tier || 'current'} plan`} />
+            <InfoRow label="Pending" value={formatCurrency(commission.totalCommissionPending, commission.currency)} />
+            <InfoRow label="Paid" value={formatCurrency(commission.totalCommissionPaid, commission.currency)} />
+            <InfoRow label="Waived" value={formatCurrency(commission.totalCommissionWaived, commission.currency)} />
             <InfoRow label="Applies to" value={[commission.appliesTo?.products && 'Products', commission.appliesTo?.services && 'Services'].filter(Boolean).join(', ') || '—'} isLast />
           </SectionCard>
 

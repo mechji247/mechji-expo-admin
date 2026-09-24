@@ -46,7 +46,7 @@ const emptyPlan = (tier = '') => ({
     annualDiscount: '',
     savingsAmount: '',
   },
-  commission: { flatRate: '', percentageRate: '', productThreshold: '1000' },
+  commission: { percentageRate: '' },
   features: [emptyFeature()],
   isActive: true,
   sortOrder: '',
@@ -69,9 +69,7 @@ const planToForm = (plan) => ({
     savingsAmount: String(plan.pricing?.savingsAmount ?? ''),
   },
   commission: {
-    flatRate: String(plan.commission?.flatRate ?? ''),
     percentageRate: String(plan.commission?.percentageRate ?? ''),
-    productThreshold: String(plan.commission?.productThreshold ?? 1000),
   },
   features: plan.features?.length
     ? plan.features.map((feature) => ({ key: `${Date.now()}_${Math.random()}`, name: feature.name || '', description: feature.description || '', enabled: feature.enabled !== false }))
@@ -87,9 +85,7 @@ const validate = (form, isEdit) => {
   if (!form.displayName.trim()) return 'Display name is required.';
   if (!isNonNegativeNumber(form.limits.maxProducts) || !isNonNegativeNumber(form.limits.maxServices)) return 'Product and service limits must be zero or greater.';
   if (!isNonNegativeNumber(form.pricing.amount)) return 'Plan price must be zero or greater.';
-  if (!isNonNegativeNumber(form.commission.flatRate)) return 'Flat commission must be zero or greater.';
   if (!isNonNegativeNumber(form.commission.percentageRate) || Number(form.commission.percentageRate) > 100) return 'Percentage commission must be between 0 and 100.';
-  if (form.commission.productThreshold !== '' && !isNonNegativeNumber(form.commission.productThreshold)) return 'Order threshold must be zero or greater.';
   if (form.pricing.annualDiscount !== '' && (!isNonNegativeNumber(form.pricing.annualDiscount) || Number(form.pricing.annualDiscount) > 100)) return 'Annual discount must be between 0 and 100.';
   return null;
 };
@@ -111,9 +107,7 @@ const buildPayload = (form) => ({
     savingsAmount: form.pricing.savingsAmount === '' ? 0 : Number(form.pricing.savingsAmount),
   },
   commission: {
-    flatRate: Number(form.commission.flatRate),
     percentageRate: Number(form.commission.percentageRate),
-    ...(form.commission.productThreshold === '' ? {} : { productThreshold: Number(form.commission.productThreshold) }),
   },
   features: form.features
     .filter((feature) => feature.name.trim())
@@ -303,7 +297,7 @@ function PlanCard({ plan, busy, onEdit, onDelete, onToggle }) {
       </View>
       <Text style={styles.price}>{formatMoney(plan.pricing?.amount, currency)} <Text style={styles.cycle}>/ {plan.pricing?.billingCycle === 'monthly' ? 'month' : 'year'}</Text></Text>
       <Text style={styles.detail}>{plan.limits?.maxProducts ?? 0} products · {plan.limits?.maxServices ?? 0} services</Text>
-      <Text style={styles.detail}>Commission: {formatMoney(plan.commission?.flatRate, currency)} above {formatMoney(plan.commission?.productThreshold, currency)} · {plan.commission?.percentageRate ?? 0}% otherwise</Text>
+      <Text style={styles.detail}>Commission: {plan.commission?.percentageRate ?? 0}% of every delivered order and completed service</Text>
       <View style={styles.cardActions}>
         <Pressable disabled={busy} onPress={onToggle}><Text style={styles.secondaryAction}>{busy ? 'Updating…' : plan.isActive ? 'Deactivate' : 'Activate'}</Text></Pressable>
         <View style={styles.rightActions}>
@@ -342,11 +336,9 @@ function PlanFormModal({ visible, mode, form, setForm, update, availableTiers, f
             <Input label="Original price (optional)" value={form.pricing.originalPrice} onChangeText={(value) => update('pricing.originalPrice', value)} keyboardType="decimal-pad" />
             <Input label="Annual discount %" value={form.pricing.annualDiscount} onChangeText={(value) => update('pricing.annualDiscount', value)} keyboardType="decimal-pad" />
             <Input label="Savings amount" value={form.pricing.savingsAmount} onChangeText={(value) => update('pricing.savingsAmount', value)} keyboardType="decimal-pad" />
-            <Section title={`Commission (${currency})`} />
-            <Text style={styles.help}>The same threshold rule applies to products and services.</Text>
-            <Input label="Flat rate" value={form.commission.flatRate} onChangeText={(value) => update('commission.flatRate', value)} keyboardType="decimal-pad" />
-            <Input label="Percentage rate" value={form.commission.percentageRate} onChangeText={(value) => update('commission.percentageRate', value)} keyboardType="decimal-pad" />
-            <Input label="Order threshold" value={form.commission.productThreshold} onChangeText={(value) => update('commission.productThreshold', value)} keyboardType="decimal-pad" />
+            <Section title="Commission" />
+            <Text style={styles.help}>One percentage of each delivered order's value or completed service's final bill.</Text>
+            <Input label="Commission rate (%)" value={form.commission.percentageRate} onChangeText={(value) => update('commission.percentageRate', value)} keyboardType="decimal-pad" />
             <Section title="Features" />
             {form.features.map((feature) => <View key={feature.key} style={styles.featureBox}><View style={styles.featureTop}><Text style={styles.featureTitle}>Feature</Text><Pressable onPress={() => removeFeature(feature.key)}><Ionicons name="trash-outline" size={18} color={colors.danger} /></Pressable></View><Input label="Name" value={feature.name} onChangeText={(value) => updateFeature(feature.key, 'name', value)} /><Input label="Description" value={feature.description} onChangeText={(value) => updateFeature(feature.key, 'description', value)} /><View style={styles.switchRow}><Text style={styles.inputLabel}>Enabled</Text><Switch value={feature.enabled} onValueChange={(value) => updateFeature(feature.key, 'enabled', value)} trackColor={{ false: colors.border, true: colors.primary }} /></View></View>)}
             <Pressable onPress={addFeature} style={styles.addFeature}><Ionicons name="add" size={18} color={colors.primary} /><Text style={styles.addFeatureText}>Add feature</Text></Pressable>

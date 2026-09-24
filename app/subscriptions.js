@@ -26,7 +26,7 @@ export default function SubscriptionsScreen() {
           </View>
           <Text style={styles.manageTitle}>Subscription plan management</Text>
           <Text style={styles.manageCopy}>
-            Create, edit, activate, or retire vendor plans. Plan pricing uses the backend’s base currency and the shared product/service commission rule.
+            Create, edit, activate, or retire vendor plans. Plan pricing uses the backend’s base currency; each plan sets one commission percentage for products and services.
           </Text>
           <Pressable style={styles.manageButton} onPress={() => router.push('/subscriptions/manage')}>
             <Text style={styles.manageButtonText}>Manage subscription plans</Text>
