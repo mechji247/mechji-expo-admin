@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { colors, spacing } from '../../lib/constants/theme';
 import { adminLogout, selectAdminInfo, selectAdminLoading } from '../../store/slices/adminSlice';
+import { selectInboxCounts, selectSupportMeta, selectSupportUnreadTickets } from '../../store/slices/supportDeskSlice';
 import log from '../../lib/utils/logger';
 
 const COMMERCE_ROWS = [
@@ -32,13 +33,14 @@ function getInitials(name) {
   return parts.map((p) => p[0]?.toUpperCase() || '').join('') || '?';
 }
 
-function MoreRow({ label, icon, onPress }) {
+function MoreRow({ label, icon, onPress, count }) {
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable style={styles.row} onPress={onPress} accessibilityRole="button" accessibilityLabel={count ? `${label}, ${count}` : label}>
       <View style={styles.rowIconCircle}>
         <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
       <Text style={styles.rowLabel}>{label}</Text>
+      {count ? <View style={styles.countPill}><Text style={styles.countText}>{count}</Text></View> : null}
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
     </Pressable>
   );
@@ -49,6 +51,16 @@ export default function MoreScreen() {
   const router = useRouter();
   const adminInfo = useSelector(selectAdminInfo);
   const loading = useSelector(selectAdminLoading);
+  // Support rows appear only for admins with support access (the desk
+  // metadata loads for them via SupportLiveBridge).
+  const supportMeta = useSelector(selectSupportMeta);
+  const supportUnread = useSelector(selectSupportUnreadTickets);
+  const supportCounts = useSelector(selectInboxCounts);
+  const supportRows = supportMeta ? [
+    { key: 'supportInbox', label: 'Support inbox', icon: 'headset-outline', route: '/support', count: supportUnread },
+    { key: 'supportDisputes', label: 'Disputes', icon: 'git-compare-outline', route: '/support/disputes', count: supportCounts.disputed || 0 },
+    ...(supportMeta.me?.capabilities?.includes('analytics.read') ? [{ key: 'supportDashboard', label: 'Support dashboard', icon: 'stats-chart-outline', route: '/support/dashboard' }] : []),
+  ] : [];
 
   const displayName = adminInfo?.name || adminInfo?.fullName || adminInfo?.email || 'Admin';
 
@@ -88,6 +100,20 @@ export default function MoreScreen() {
           <Text style={styles.avatarText}>{getInitials(displayName)}</Text>
         </Pressable>
       </View>
+
+      {supportRows.length ? (
+        <>
+          <Text style={styles.sectionLabel}>SUPPORT</Text>
+          <View style={styles.card}>
+            {supportRows.map((row, index) => (
+              <View key={row.key}>
+                <MoreRow label={row.label} icon={row.icon} count={row.count} onPress={() => handleRowPress(row)} />
+                {index < supportRows.length - 1 && <View style={styles.divider} />}
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
 
       <Text style={styles.sectionLabel}>COMMERCE</Text>
       <View style={styles.card}>
@@ -201,6 +227,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.text,
+  },
+  countPill: {
+    minWidth: 22,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    marginRight: spacing.xs,
+  },
+  countText: {
+    color: colors.surface,
+    fontSize: 11,
+    fontWeight: '700',
   },
   divider: {
     height: 1,

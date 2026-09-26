@@ -11,6 +11,7 @@ import { store } from '../store/store';
 import {  clearTokens, hasStoredSession, saveTokens} from '../lib/tokens/secureTokens';
 import { registerAdminPushToken, addNotificationResponseListener, addNotificationReceivedListener } from '../lib/services/pushNotifications';
 import { fetchUnreadCount as fetchAdminNotificationUnreadCount } from '../store/slices/adminNotificationInboxSlice';
+import SupportLiveBridge from '../components/support/SupportLiveBridge';
 
 
 const EVENT_ROUTE_MAP = {
@@ -160,6 +161,12 @@ function RootNavigator () {
             if (identifier === lastNotification.current) return;
             lastNotification.current = identifier;
             const data = response?.notification?.request?.content?.data || {};
+            // Support alerts (new/assigned/escalated tickets, replies, SLA,
+            // approvals) all carry navigate: 'SupportTicketDetail'.
+            if (data.navigate === 'SupportTicketDetail') {
+              setPendingNotification(data.targetId ? `/support/${encodeURIComponent(String(data.targetId))}` : '/support');
+              return;
+            }
             const resolveRoute = EVENT_ROUTE_MAP[data.type];
             setPendingNotification(resolveRoute ? resolveRoute(encodeURIComponent(String(data.targetId || ''))) : '/notifications');
           };
@@ -200,10 +207,14 @@ function RootNavigator () {
         }else{
 
           return (
-            <Stack screenOptions={{ headerShown : false }}>
-                <Stack.Screen name="(auth)"/>
-                <Stack.Screen name="(tabs)"/>
-            </Stack>
+            <>
+              <Stack screenOptions={{ headerShown : false }}>
+                  <Stack.Screen name="(auth)"/>
+                  <Stack.Screen name="(tabs)"/>
+              </Stack>
+              {/* Support desk: live agent socket + in-app alerts (support admins only). */}
+              <SupportLiveBridge active={status === 'authenticated'} />
+            </>
           )
         }
 

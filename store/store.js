@@ -17,6 +17,7 @@ import ordersReducer from './slices/ordersSlice';
 import productsReducer from './slices/productsSlice';
 import servicesReducer from './slices/servicesSlice';
 import adminNotificationInboxReducer from './slices/adminNotificationInboxSlice';
+import supportDeskReducer from './slices/supportDeskSlice';
 
 
 export const store = configureStore({
@@ -41,5 +42,7 @@ export const store = configureStore({
     services: servicesReducer,
     // The admin's own read/unread inbox (app/notifications-inbox.js).
     adminNotificationInbox: adminNotificationInboxReducer,
+    // Support desk (app/support/*): desk metadata, inbox, live alerts.
+    supportDesk: supportDeskReducer,
   },
 });
